@@ -5,9 +5,11 @@ from typing import Any, Dict, List, Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 PROFILE_DIR = "/Users/10pearls/pw-debug-profile"
+CDP_URL = "http://localhost:9222"
 TARGET_URL = "https://zerotrust.1ecorp.net/"
 TASK_MANAGER_URL = "https://task-manager.1evis.net/workspaces-info"
 TASK_SUMMARY = "https://task-manager.1evis.net/summary/visasgf"
+BITBUCKET_BRANCHES_URL = "https://bitbucket.org/grupoblidoo/visas-public/branches"
 
 BUTTON_TEXT = "Continue as Santiago"
 DAYS_THRESHOLD = 2
@@ -244,6 +246,10 @@ with sync_playwright() as p:
 
         task_summay = context.new_page()
         wait_for_task_summary(task_summay)
+
+        # Open Bitbucket branches in a NEW tab
+        bitbucket_page = context.new_page()
+        bitbucket_page.goto(BITBUCKET_BRANCHES_URL, wait_until="domcontentloaded")
 
         # Open task manager in a NEW tab
         task_page = context.new_page()

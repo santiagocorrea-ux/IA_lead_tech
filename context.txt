@@ -1,3 +1,18 @@
  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \                                                                         2m 28s  15:08:04
   --remote-debugging-port=9222 \
   --user-data-dir="$HOME/pw-debug-profile"
+
+
+
+  # 1. Fully quit all Chrome windows (Cmd+Q on each, or:)
+killall "Google Chrome" 2>/dev/null
+
+# 2. Remove stale lock files in that profile
+rm -f "$HOME/pw-debug-profile/SingletonLock" \
+      "$HOME/pw-debug-profile/SingletonCookie" \
+      "$HOME/pw-debug-profile/SingletonSocket"
+
+# 3. Launch Chrome with debugging port
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --remote-debugging-port=9222 \
+  --user-data-dir="$HOME/pw-debug-profile"

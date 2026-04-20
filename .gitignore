@@ -1,0 +1,6 @@
+token.txt
+*.token
+.env
+.bitbucket_auth
+__pycache__/
+*.pyc
