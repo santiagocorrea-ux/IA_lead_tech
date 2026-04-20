@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+import bitbucket
 
 PROFILE_DIR = "/Users/10pearls/pw-debug-profile"
 CDP_URL = "http://localhost:9222"
@@ -201,6 +202,18 @@ def print_branch_report(info: Dict[str, Any]) -> None:
     print(f"Days Since Creation: {info['Days Since Creation']}")
     print(f"Older than {DAYS_THRESHOLD} days? {info['Older Than Threshold']}")
 
+    print()
+    print("Bitbucket comparison vs master:")
+    try:
+        bb = bitbucket.commits_ahead_behind(info.get("Branch", ""))
+        if not bb["exists"]:
+            print(f"  Branch '{bb['branch']}' not found in Bitbucket.")
+        else:
+            print(f"  Ahead:  {bb['ahead']} commits")
+            print(f"  Behind: {bb['behind']} commits")
+    except Exception as e:
+        print(f"  Bitbucket lookup failed: {e}")
+
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -247,9 +260,6 @@ with sync_playwright() as p:
         task_summay = context.new_page()
         wait_for_task_summary(task_summay)
 
-        # Open Bitbucket branches in a NEW tab
-        bitbucket_page = context.new_page()
-        bitbucket_page.goto(BITBUCKET_BRANCHES_URL, wait_until="domcontentloaded")
 
         # Open task manager in a NEW tab
         task_page = context.new_page()
