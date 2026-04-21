@@ -6,7 +6,11 @@ Usage:
     python visa_testcase_generator.py \
         --json sample_test_cases.json \
         --template VISASGF-4167_test_cases.xlsx \
-        --output generated_test_cases.xlsx
+        --output all_test_cases.xlsx
+
+If --output already exists the script adds (or replaces) a sheet named after
+the JSON file instead of creating a new workbook, so all user stories share
+one Excel file.
 """
 
 from __future__ import annotations
@@ -16,8 +20,7 @@ import json
 from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
-
+from typing import Any, List
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -52,12 +55,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         required=True,
-        help="Path to the output Excel file (.xlsx).",
+        help="Path to the output Excel file (.xlsx). Existing files are updated in-place.",
     )
     parser.add_argument(
         "--sheet",
         default=None,
-        help="Sheet name to write into. Defaults to the first sheet in the template.",
+        help="Sheet name to write into. Defaults to the JSON filename (without extension).",
     )
     return parser.parse_args()
 
@@ -112,9 +115,9 @@ def copy_cell_style(src_cell, dst_cell) -> None:
     dst_cell.protection = copy(src_cell.protection)
 
 
-def copy_template_row_style(ws: Worksheet, src_row: int, dst_row: int, max_col: int) -> None:
+def copy_template_row_style(src_ws: Worksheet, src_row: int, dst_ws: Worksheet, dst_row: int, max_col: int) -> None:
     for col in range(1, max_col + 1):
-        copy_cell_style(ws.cell(src_row, col), ws.cell(dst_row, col))
+        copy_cell_style(src_ws.cell(src_row, col), dst_ws.cell(dst_row, col))
 
 
 def clear_sheet_values(ws: Worksheet) -> None:
@@ -140,96 +143,136 @@ def step_row_height(step: Step, base_height: float) -> float:
     return max(base_height, 18 * max_lines + 4)
 
 
+def _read_template_styles(template_path: str | Path) -> dict:
+    """Extract style references and dimensions from the template's first sheet."""
+    tmpl_wb = load_workbook(template_path)
+    tmpl_ws = tmpl_wb[tmpl_wb.sheetnames[0]]
+
+    title_row_idx = 1
+    header_row_idx = 2
+    detail_row_idx = 3
+    blank_row_idx = 6
+
+    sample_detail_heights = [
+        tmpl_ws.row_dimensions[r].height
+        for r in range(detail_row_idx, blank_row_idx)
+        if tmpl_ws.row_dimensions[r].height
+    ]
+
+    return {
+        "wb": tmpl_wb,
+        "ws": tmpl_ws,
+        "max_col": tmpl_ws.max_column,
+        "title_row_idx": title_row_idx,
+        "header_row_idx": header_row_idx,
+        "detail_row_idx": detail_row_idx,
+        "blank_row_idx": blank_row_idx,
+        "name_label": tmpl_ws.cell(title_row_idx, 1).value or "Name:",
+        "headers": [
+            tmpl_ws.cell(header_row_idx, 1).value or "Action",
+            tmpl_ws.cell(header_row_idx, 2).value or "Data",
+            tmpl_ws.cell(header_row_idx, 3).value or "Expected Result",
+        ],
+        "title_height": tmpl_ws.row_dimensions[title_row_idx].height or 24,
+        "header_height": tmpl_ws.row_dimensions[header_row_idx].height or 22,
+        "detail_height": min(sample_detail_heights) if sample_detail_heights else 22,
+        "blank_height": tmpl_ws.row_dimensions[blank_row_idx].height or 10,
+        "col_widths": {
+            col: tmpl_ws.column_dimensions[col].width
+            for col in tmpl_ws.column_dimensions
+        },
+    }
+
+
+def _write_cases_to_sheet(ws: Worksheet, test_cases: List[TestCase], styles: dict) -> None:
+    """Write test cases into ws, copying styles from the template sheet."""
+    tmpl_ws = styles["ws"]
+    max_col = styles["max_col"]
+
+    clear_sheet_values(ws)
+
+    # Copy column widths from template.
+    for col_letter, width in styles["col_widths"].items():
+        ws.column_dimensions[col_letter].width = width
+
+    current_row = 1
+    for case in test_cases:
+        copy_template_row_style(tmpl_ws, styles["title_row_idx"], ws, current_row, max_col)
+        ws.row_dimensions[current_row].height = styles["title_height"]
+        ws.cell(current_row, 1).value = styles["name_label"]
+        ws.cell(current_row, 2).value = case.name
+        if max_col >= 3:
+            ws.cell(current_row, 3).value = None
+        current_row += 1
+
+        copy_template_row_style(tmpl_ws, styles["header_row_idx"], ws, current_row, max_col)
+        ws.row_dimensions[current_row].height = styles["header_height"]
+        for col, header in enumerate(styles["headers"], start=1):
+            ws.cell(current_row, col).value = header
+        current_row += 1
+
+        for step in case.steps:
+            copy_template_row_style(tmpl_ws, styles["detail_row_idx"], ws, current_row, max_col)
+            ws.row_dimensions[current_row].height = step_row_height(step, styles["detail_height"])
+            ws.cell(current_row, 1).value = step.action
+            ws.cell(current_row, 2).value = step.data
+            ws.cell(current_row, 3).value = step.expected_result
+            current_row += 1
+
+        copy_template_row_style(tmpl_ws, styles["blank_row_idx"], ws, current_row, max_col)
+        ws.row_dimensions[current_row].height = styles["blank_height"]
+        for col in range(1, max_col + 1):
+            ws.cell(current_row, col).value = None
+        current_row += 1
+
+    for row in range(current_row, ws.max_row + 1):
+        for col in range(1, max_col + 1):
+            ws.cell(row, col).value = None
+        ws.row_dimensions[row].height = None
+
+
 def build_excel(
     template_path: str | Path,
     output_path: str | Path,
     test_cases: List[TestCase],
     sheet_name: str | None = None,
 ) -> None:
-    wb = load_workbook(template_path)
-    ws = wb[sheet_name] if sheet_name else wb[wb.sheetnames[0]]
-
-    # Capture the original layout and styles from the sample block in the template.
-    max_col = ws.max_column
-    title_row_idx = 1
-    header_row_idx = 2
-    detail_row_idx = 3
-    blank_row_idx = 6
-
-    name_label = ws.cell(title_row_idx, 1).value or "Name:"
-    headers = [
-        ws.cell(header_row_idx, 1).value or "Action",
-        ws.cell(header_row_idx, 2).value or "Data",
-        ws.cell(header_row_idx, 3).value or "Expected Result",
-    ]
-
-    title_height = ws.row_dimensions[title_row_idx].height or 24
-    header_height = ws.row_dimensions[header_row_idx].height or 22
-    sample_detail_heights = [
-        ws.row_dimensions[row_idx].height
-        for row_idx in range(detail_row_idx, blank_row_idx)
-        if ws.row_dimensions[row_idx].height
-    ]
-    detail_height = min(sample_detail_heights) if sample_detail_heights else 22
-    blank_height = ws.row_dimensions[blank_row_idx].height or 10
-
-    # Start from a clean sheet while keeping sheet-level layout (column widths, sheet name, etc.).
-    clear_sheet_values(ws)
-
-    current_row = 1
-    for case in test_cases:
-        # Title row
-        copy_template_row_style(ws, title_row_idx, current_row, max_col)
-        ws.row_dimensions[current_row].height = title_height
-        ws.cell(current_row, 1).value = name_label
-        ws.cell(current_row, 2).value = case.name
-        if max_col >= 3:
-            ws.cell(current_row, 3).value = None
-        current_row += 1
-
-        # Header row
-        copy_template_row_style(ws, header_row_idx, current_row, max_col)
-        ws.row_dimensions[current_row].height = header_height
-        for col, header in enumerate(headers, start=1):
-            ws.cell(current_row, col).value = header
-        current_row += 1
-
-        # Step rows
-        for step in case.steps:
-            copy_template_row_style(ws, detail_row_idx, current_row, max_col)
-            ws.row_dimensions[current_row].height = step_row_height(step, detail_height)
-            ws.cell(current_row, 1).value = step.action
-            ws.cell(current_row, 2).value = step.data
-            ws.cell(current_row, 3).value = step.expected_result
-            current_row += 1
-
-        # Blank separator row
-        copy_template_row_style(ws, blank_row_idx, current_row, max_col)
-        ws.row_dimensions[current_row].height = blank_height
-        for col in range(1, max_col + 1):
-            ws.cell(current_row, col).value = None
-        current_row += 1
-
-    # Optional cleanup: clear remaining old rows below the new content.
-    for row in range(current_row, ws.max_row + 1):
-        for col in range(1, max_col + 1):
-            ws.cell(row, col).value = None
-
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    styles = _read_template_styles(template_path)
+
+    if output_path.exists():
+        # Update existing workbook: replace the target sheet or add a new one.
+        wb = load_workbook(output_path)
+        if sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+        else:
+            ws = wb.create_sheet(title=sheet_name)
+    else:
+        # First run: initialise from template so sheet-level settings are preserved.
+        wb = styles["wb"]
+        ws = wb[wb.sheetnames[0]]
+        if sheet_name and ws.title != sheet_name:
+            ws.title = sheet_name
+
+    _write_cases_to_sheet(ws, test_cases, styles)
     wb.save(output_path)
 
 
 def main() -> None:
     args = parse_args()
+    sheet_name = args.sheet or Path(args.json).stem
     test_cases = load_test_cases(args.json)
+    output_path = Path(args.output)
     build_excel(
         template_path=args.template,
-        output_path=args.output,
+        output_path=output_path,
         test_cases=test_cases,
-        sheet_name=args.sheet,
+        sheet_name=sheet_name,
     )
-    print(f"Created: {args.output}")
+    action = "Updated" if output_path.exists() else "Created"
+    print(f"{action}: {output_path}  (sheet: '{sheet_name}')")
 
 
 if __name__ == "__main__":
