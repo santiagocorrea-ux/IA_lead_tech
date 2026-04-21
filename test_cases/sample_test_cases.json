@@ -1,0 +1,44 @@
+{
+  "test_cases": [
+    {
+      "name": "validate dropdown scroll - ${styleweb}",
+      "steps": [
+        {
+          "action": "Open the ${styleweb} website",
+          "data": "Parameter ${styleweb}:\nScope: all stylewebs",
+          "expected_result": ""
+        },
+        {
+          "action": "Click the language selector",
+          "data": "",
+          "expected_result": "The dropdown appears."
+        },
+        {
+          "action": "Scroll inside the language selector",
+          "data": "Use a screen resolution where not all languages are visible",
+          "expected_result": "The dropdown has an internal scroll and the user can reach all languages."
+        }
+      ]
+    },
+    {
+      "name": "validate order dropdown - ${styleweb}",
+      "steps": [
+        {
+          "action": "Open the ${styleweb} website",
+          "data": "Parameter ${styleweb}:\nScope: all stylewebs",
+          "expected_result": ""
+        },
+        {
+          "action": "Click the language selector",
+          "data": "",
+          "expected_result": "The dropdown appears."
+        },
+        {
+          "action": "Check the order of the languages.",
+          "data": "",
+          "expected_result": "For ESTA: languages are displayed in this order: US, JP, ES, KR.\nFor CA: languages are displayed in this order: US, ES, FR, DE."
+        }
+      ]
+    }
+  ]
+}
