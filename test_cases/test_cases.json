@@ -1,0 +1,74 @@
+{
+  "test_cases": [
+    {
+      "name": "Fonts and Material Icons load from local origin on ${template}",
+      "steps": [
+        {
+          "action": "Open ${template} in Chrome with DevTools > Network tab filtered by 'font' (clear cache before loading)",
+          "data": "Styleweb: ${template}\nValid values: egypt1, egypt2, egyptontrailuk, egyptseo, egyptseo2, egyptseo3",
+          "expected_result": "Every font file request (woff2/woff/ttf/otf) is served from the same origin as ${template} (or the project's own CDN). No requests go to fonts.googleapis.com, fonts.gstatic.com, or any external font host."
+        },
+        {
+          "action": "In the Network tab, filter by 'material' and 'icons' to check Material Icons source",
+          "data": "",
+          "expected_result": "Material Icons assets (font file and/or CSS) are served locally from ${template}. No requests to fonts.googleapis.com/icon or similar external icon hosts."
+        }
+      ]
+    },
+    {
+      "name": "Page HTML on ${template} no longer references external font/icon hosts",
+      "steps": [
+        {
+          "action": "View source of ${template} entry page and search for external font hosts",
+          "data": "Terms to search: fonts.googleapis.com, fonts.gstatic.com, cdn.fonts, material-icons CDN",
+          "expected_result": "No <link>, @import, or @font-face src references point to external font/icon hosts. All @font-face rules use relative or same-origin URLs."
+        }
+      ]
+    },
+    {
+      "name": "Regression - Visual rendering of fonts is unchanged on ${template}",
+      "steps": [
+        {
+          "action": "Compare ${template} application flow (landing, application form, confirm, thank-you) before and after the refactor",
+          "data": "Baseline: screenshots from the pre-change build of ${template}\nComparison: latest build on test env",
+          "expected_result": "Font family, weight, size, line-height, and letter-spacing look identical to baseline. No fallback/Times New Roman flashes. No layout shifts caused by different metrics."
+        },
+        {
+          "action": "Inspect computed styles on a representative heading and body paragraph on ${template}",
+          "data": "DevTools > Elements > Computed > font-family",
+          "expected_result": "The first font in the font-family list resolves to the locally hosted font (no fallback in use for the primary text)."
+        }
+      ]
+    },
+    {
+      "name": "Regression - Material Icons render correctly across ${template} flow",
+      "steps": [
+        {
+          "action": "Navigate every screen on ${template} that shows icons (navbar, form inputs, modals, CTA buttons, footer, toasts)",
+          "data": "Screens: home, application form, payment, profile, confirmation, language selector",
+          "expected_result": "All icons render with their correct glyph. No missing-glyph squares, no 'content: ...' literal text visible, no broken icon placeholders."
+        }
+      ]
+    },
+    {
+      "name": "Blocked-network behaviour on ${template} (self-hosting proof)",
+      "steps": [
+        {
+          "action": "Block fonts.googleapis.com and fonts.gstatic.com via DevTools > Network > 'Block request domain', then reload ${template}",
+          "data": "",
+          "expected_result": "Page renders fully with the intended typography and icons. No broken glyphs; no console errors referencing blocked font hosts."
+        }
+      ]
+    },
+    {
+      "name": "Console is clean on key pages of ${template}",
+      "steps": [
+        {
+          "action": "Open the key pages of ${template} (home, application, payment, confirmation) with DevTools open and watch the console",
+          "data": "",
+          "expected_result": "No 404s for font or icon assets. No warnings about 'missing font' or 'preloaded font not used'. No new errors introduced by the change."
+        }
+      ]
+    }
+  ]
+}

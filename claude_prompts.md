@@ -20,38 +20,47 @@ test_cases/
 
 For every new user story:
 
-1. Copy the prompt in **§1** below.
-2. Replace `{{ISSUE_KEY}}` and `{{USER_STORY}}` with the Jira data.
-3. Paste into Claude. Claude overwrites `test_cases/test_cases.json` and `test_cases/test_cases.xlsx` with the new cases (previous story is discarded).
+1. Say to Claude: **`Use §1 from claude_prompts.md for VISASGF-XXXX`**.
+2. Claude will:
+   - Fetch the story from Jira via `python3 jira_reader.py VISASGF-XXXX --json`
+   - Generate test cases from the description + acceptance criteria
+   - Overwrite `test_cases/test_cases.json` and `test_cases/test_cases.xlsx`
+
+No need to paste the story — `jira_reader.py` pulls it straight from Jira.
 
 ---
 
 ## 1. New user story → test cases (main prompt)
 
-Copy everything inside the fence, fill in the placeholders, and paste to Claude:
+Just say this to Claude (replace `VISASGF-XXXX` with the issue key):
 
 ```
-Use §1 from claude_prompts.md for {{ISSUE_KEY}}.
+Use §1 from claude_prompts.md for VISASGF-XXXX
+```
 
-Analyse the user story below and generate manual test cases.
+When Claude sees that phrase, it will:
 
-Rules:
-- Format each step as Action / Data / Expected Result.
-- Cover Happy Path, Unhappy Path, and Edge Cases.
-- One test case per Acceptance Criterion (split when an AC has multiple branches).
-- Include a Regression case for any reference tickets mentioned in the story.
-- Use explicit, verifiable expected results (UI text, API codes, DB/service status, logs).
+1. Fetch the story from Jira:
+   ```bash
+   python3 jira_reader.py VISASGF-XXXX --json
+   ```
+2. Parse the `summary`, `description`, and `comments` to extract user story + acceptance criteria.
+3. Generate test cases following these rules:
+   - Format each step as Action / Data / Expected Result.
+   - Cover Happy Path, Unhappy Path, and Edge Cases.
+   - One test case per Acceptance Criterion (split when an AC has multiple branches).
+   - Include a Regression case for any reference tickets mentioned in the story.
+   - Use explicit, verifiable expected results (UI text, API codes, DB/service status, logs).
+4. Overwrite `test_cases/test_cases.json` with the new cases (schema: `{"test_cases": [{"name": ..., "steps": [{"action": ..., "data": ..., "expected_result": ...}]}]}`).
+5. Run `visa_testcase_generator.py` to overwrite `test_cases/test_cases.xlsx`.
+6. Report the issue key, summary, and test case count.
 
-Deliverables (overwrite — do NOT create new files):
-1. Write JSON to test_cases/test_cases.json using the same schema as before
-   ({"test_cases": [{"name": ..., "steps": [{"action": ..., "data": ..., "expected_result": ...}]}]}).
-2. Run visa_testcase_generator.py to overwrite test_cases/test_cases.xlsx.
-3. Report the issue key and test case count.
+**Fallback:** if Jira is unreachable or the story is not in Jira, include the story text inline after the issue key:
 
-User story:
----
-{{USER_STORY}}
----
+```
+Use §1 from claude_prompts.md for VISASGF-XXXX
+
+<paste story text here>
 ```
 
 ---
@@ -61,14 +70,10 @@ User story:
 When you want to review / edit the JSON before producing the Excel.
 
 ```
-Overwrite test_cases/test_cases.json for {{ISSUE_KEY}} with test cases for the story below.
-Same schema as before. Do not run the Excel generator yet.
-
-User story:
----
-{{USER_STORY}}
----
+Use §2 from claude_prompts.md for VISASGF-XXXX
 ```
+
+Claude fetches the story via `jira_reader.py`, writes `test_cases/test_cases.json`, and stops there (no Excel yet).
 
 ---
 
