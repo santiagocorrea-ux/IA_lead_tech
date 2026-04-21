@@ -16,8 +16,7 @@ def _require_credentials() -> tuple[str, str, str]:
     """Return (site, email, token), raising if any are missing."""
     if not config.JIRA_EMAIL or not config.JIRA_API_TOKEN:
         raise ValueError(
-            "Missing Jira credentials. Set JIRA_EMAIL and JIRA_API_TOKEN "
-            "in .env (or token_jira.txt for backward compat)."
+            "Missing Jira credentials. Set JIRA_EMAIL and JIRA_API_TOKEN in .env"
         )
     return config.JIRA_SITE, config.JIRA_EMAIL, config.JIRA_API_TOKEN
 
@@ -105,6 +104,7 @@ def get_issue(
     selected_fields = fields or [
         "summary", "description", "issuetype", "status",
         "priority", "labels", "assignee", "reporter", "comment",
+        "customfield_15530",  # Acceptance Criteria
     ]
 
     url = f"{base_url}/issue/{issue_key}"
@@ -141,12 +141,16 @@ def get_issue(
         for item in (f.get("comment") or {}).get("comments", [])
     ]
 
+    ac_raw = f.get("customfield_15530")
+    acceptance_criteria = adf_to_text(ac_raw).strip() if isinstance(ac_raw, dict) else (ac_raw or "").strip()
+
     return {
         "key": raw.get("key", ""),
         "id": raw.get("id", ""),
         "url": f"{effective_site}/browse/{raw.get('key', issue_key)}",
         "summary": f.get("summary", "") or "",
         "description": adf_to_text(f.get("description")).strip(),
+        "acceptance_criteria": acceptance_criteria,
         "issue_type": ((f.get("issuetype") or {}).get("name") or ""),
         "status": ((f.get("status") or {}).get("name") or ""),
         "priority": ((f.get("priority") or {}).get("name") or ""),
@@ -172,6 +176,9 @@ def print_issue(issue: dict[str, Any]) -> None:
     print("-" * 80)
     print("Description:")
     print(issue["description"] or "(empty)")
+    print("-" * 80)
+    print("Acceptance Criteria:")
+    print(issue.get("acceptance_criteria") or "(empty)")
     print("-" * 80)
     if issue["comments"]:
         print(f"Comments ({len(issue['comments'])}):")

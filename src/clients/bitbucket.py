@@ -13,8 +13,7 @@ from src.clients.base import make_session
 def _require_credentials() -> tuple[str, str]:
     if not config.BITBUCKET_USERNAME or not config.BITBUCKET_TOKEN:
         raise ValueError(
-            "Missing Bitbucket credentials. Set BITBUCKET_USERNAME and BITBUCKET_TOKEN "
-            "in .env (or token.txt for backward compat)."
+            "Missing Bitbucket credentials. Set BITBUCKET_USERNAME and BITBUCKET_TOKEN in .env"
         )
     return config.BITBUCKET_USERNAME, config.BITBUCKET_TOKEN
 

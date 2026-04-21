@@ -1,72 +1,82 @@
 {
   "test_cases": [
     {
-      "name": "Fonts and Material Icons load from local origin on ${template}",
+      "name": "TC01 - Happy Path: Fonts served from local origin on all Egypt stylewebs",
       "steps": [
         {
-          "action": "Open ${template} in Chrome with DevTools > Network tab filtered by 'font' (clear cache before loading)",
-          "data": "Styleweb: ${template}\nValid values: egypt1, egypt2, egyptontrailuk, egyptseo, egyptseo2, egyptseo3",
-          "expected_result": "Every font file request (woff2/woff/ttf/otf) is served from the same origin as ${template} (or the project's own CDN). No requests go to fonts.googleapis.com, fonts.gstatic.com, or any external font host."
+          "action": "Open each Egypt stylweb in Chrome with DevTools > Network tab, filter by 'font', and hard-reload (Ctrl+Shift+R) to clear cache.",
+          "data": "Stylewebs to check: egypt1, egyptseo, egyptseo2, egyptseo3, traveleg, ontrailvisauk\nTest environment: https://visas-crm.test5.1evis.net",
+          "expected_result": "All font file requests (woff2, woff, ttf) are served from the same origin as the page (local domain). Zero requests go to fonts.googleapis.com or fonts.gstatic.com."
         },
         {
-          "action": "In the Network tab, filter by 'material' and 'icons' to check Material Icons source",
-          "data": "",
-          "expected_result": "Material Icons assets (font file and/or CSS) are served locally from ${template}. No requests to fonts.googleapis.com/icon or similar external icon hosts."
+          "action": "Visually verify text renders with the intended typeface on the landing/home page of each stylweb.",
+          "data": "Stylewebs: egypt1, egyptseo, egyptseo2, egyptseo3, traveleg, ontrailvisauk",
+          "expected_result": "Fonts appear correctly styled — no fallback system font (Arial, Times New Roman) is used. Heading and body text match the expected design."
         }
       ]
     },
     {
-      "name": "Page HTML on ${template} no longer references external font/icon hosts",
+      "name": "TC02 - Happy Path: Material Icons served from local origin on all Egypt stylewebs",
       "steps": [
         {
-          "action": "View source of ${template} entry page and search for external font hosts",
-          "data": "Terms to search: fonts.googleapis.com, fonts.gstatic.com, cdn.fonts, material-icons CDN",
-          "expected_result": "No <link>, @import, or @font-face src references point to external font/icon hosts. All @font-face rules use relative or same-origin URLs."
-        }
-      ]
-    },
-    {
-      "name": "Regression - Visual rendering of fonts is unchanged on ${template}",
-      "steps": [
-        {
-          "action": "Compare ${template} application flow (landing, application form, confirm, thank-you) before and after the refactor",
-          "data": "Baseline: screenshots from the pre-change build of ${template}\nComparison: latest build on test env",
-          "expected_result": "Font family, weight, size, line-height, and letter-spacing look identical to baseline. No fallback/Times New Roman flashes. No layout shifts caused by different metrics."
+          "action": "In DevTools > Network tab, filter by 'material' and 'icons'. Open a page that displays icons (form, navbar, CTA buttons) on each Egypt stylweb.",
+          "data": "Stylewebs: egypt1, egyptseo, egyptseo2, egyptseo3, traveleg, ontrailvisauk",
+          "expected_result": "Material Icons font files and CSS are served locally. No requests to fonts.googleapis.com/icon, fonts.gstatic.com, or any external icon CDN."
         },
         {
-          "action": "Inspect computed styles on a representative heading and body paragraph on ${template}",
-          "data": "DevTools > Elements > Computed > font-family",
-          "expected_result": "The first font in the font-family list resolves to the locally hosted font (no fallback in use for the primary text)."
+          "action": "Visually verify all icons render their correct glyph (navbar icons, form-field icons, step indicators, CTA buttons).",
+          "data": "Screens: home, application form steps, payment page",
+          "expected_result": "All icons display their correct glyph. No missing-glyph squares (□) or literal ligature text (e.g. 'arrow_forward') is visible."
         }
       ]
     },
     {
-      "name": "Regression - Material Icons render correctly across ${template} flow",
+      "name": "TC03 - Page source contains no external font references",
       "steps": [
         {
-          "action": "Navigate every screen on ${template} that shows icons (navbar, form inputs, modals, CTA buttons, footer, toasts)",
-          "data": "Screens: home, application form, payment, profile, confirmation, language selector",
-          "expected_result": "All icons render with their correct glyph. No missing-glyph squares, no 'content: ...' literal text visible, no broken icon placeholders."
+          "action": "View the HTML source of the entry page for each Egypt stylweb (right-click > View Page Source) and search for font-related external domains.",
+          "data": "Terms to search: fonts.googleapis.com, fonts.gstatic.com, cdn.fonts, material-icons CDN\nStylewebs: egypt1, egyptseo, egyptseo2, egyptseo3, traveleg, ontrailvisauk",
+          "expected_result": "No <link> tags or @import rules point to external font/icon hosts. All @font-face src values use relative or same-origin URLs."
         }
       ]
     },
     {
-      "name": "Blocked-network behaviour on ${template} (self-hosting proof)",
+      "name": "TC04 - Edge Case: Page renders correctly when external CDN is blocked",
       "steps": [
         {
-          "action": "Block fonts.googleapis.com and fonts.gstatic.com via DevTools > Network > 'Block request domain', then reload ${template}",
-          "data": "",
-          "expected_result": "Page renders fully with the intended typography and icons. No broken glyphs; no console errors referencing blocked font hosts."
+          "action": "In DevTools > Network > Block request domain, add fonts.googleapis.com and fonts.gstatic.com. Hard-reload each Egypt stylweb.",
+          "data": "Blocked domains: fonts.googleapis.com, fonts.gstatic.com\nStylewebs: egypt1, egyptseo, egyptseo2, egyptseo3, traveleg, ontrailvisauk",
+          "expected_result": "All pages render fully without layout breaks or fallback fonts. No console errors referencing the blocked hosts. Fonts and icons display as designed."
         }
       ]
     },
     {
-      "name": "Console is clean on key pages of ${template}",
+      "name": "TC05 - Regression: Non-Egypt stylewebs are unaffected",
       "steps": [
         {
-          "action": "Open the key pages of ${template} (home, application, payment, confirmation) with DevTools open and watch the console",
-          "data": "",
-          "expected_result": "No 404s for font or icon assets. No warnings about 'missing font' or 'preloaded font not used'. No new errors introduced by the change."
+          "action": "Open a non-Egypt stylweb (e.g. Malaysia or Vietnam) on the same test environment and check font loading in the Network tab.",
+          "data": "Non-Egypt stylweb on test5 environment",
+          "expected_result": "Font loading behaviour is identical to before this ticket. No broken styles, missing fonts, or unintended external requests introduced."
+        },
+        {
+          "action": "Complete the application form flow on a non-Egypt stylweb and verify visual rendering.",
+          "data": "Non-Egypt stylweb — landing page through confirmation",
+          "expected_result": "Full flow renders correctly with no regressions in typography or icons."
+        }
+      ]
+    },
+    {
+      "name": "TC06 - Regression: Full Egypt application form flow renders correctly",
+      "steps": [
+        {
+          "action": "Complete the full VISA application form flow on egypt1 (home → form steps → payment → confirmation).",
+          "data": "Stylweb: egypt1 on https://visas-crm.test5.1evis.net\nUse src/automation/scripts/application.js to fill test data",
+          "expected_result": "All form steps render with correct fonts and icons. No visual regressions on labels, headings, buttons, or input fields throughout the flow."
+        },
+        {
+          "action": "Monitor the browser console during the full flow.",
+          "data": "DevTools > Console on egypt1",
+          "expected_result": "No 404 errors for font or icon assets. No 'Failed to load resource' warnings. No new JavaScript errors introduced by this change."
         }
       ]
     }
