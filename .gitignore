@@ -1,4 +1,6 @@
 token.txt
+token_jira.txt
+token_*.txt
 *.token
 .env
 .bitbucket_auth
