@@ -110,6 +110,12 @@ BITBUCKET_PAGE_SIZE = 100
 BITBUCKET_TIMEOUT = 15  # seconds
 
 # ---------------------------------------------------------------------------
+# Xray Cloud
+# ---------------------------------------------------------------------------
+XRAY_CLIENT_ID: str = _get("XRAY_CLIENT_ID", ["XRAY_CLIENT_ID"], [])
+XRAY_CLIENT_SECRET: str = _get("XRAY_CLIENT_SECRET", ["XRAY_CLIENT_SECRET"], [])
+
+# ---------------------------------------------------------------------------
 # Browser automation
 # ---------------------------------------------------------------------------
 CHROME_PROFILE_DIR: str = _get(

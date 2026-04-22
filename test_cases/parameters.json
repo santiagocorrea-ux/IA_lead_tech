@@ -1,0 +1,28 @@
+{
+  "parameters": [
+    {
+      "row_id": 1,
+      "template": "egypt1"
+    },
+    {
+      "row_id": 2,
+      "template": "egyptseo"
+    },
+    {
+      "row_id": 3,
+      "template": "egyptseo2"
+    },
+    {
+      "row_id": 4,
+      "template": "egyptseo3"
+    },
+    {
+      "row_id": 5,
+      "template": "traveleg"
+    },
+    {
+      "row_id": 6,
+      "template": "ontrailvisauk"
+    }
+  ]
+}
