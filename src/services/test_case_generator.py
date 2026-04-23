@@ -84,6 +84,43 @@ def _copy_row_style(src_ws: Worksheet, src_row: int, dst_ws: Worksheet, dst_row:
         _copy_cell_style(src_ws.cell(src_row, col), dst_ws.cell(dst_row, col))
 
 
+def _auto_size_columns(ws: Worksheet) -> None:
+    """Adjust column widths to fit content."""
+    for col_idx, col_letter in enumerate(ws.column_dimensions.keys(), start=1):
+        max_width = 10
+        for row in ws.iter_rows(min_col=col_idx, max_col=col_idx):
+            for cell in row:
+                if cell.value:
+                    text = str(cell.value)
+                    lines = text.split('\n')
+                    max_line_length = max(len(line) for line in lines) if lines else 0
+                    width = min(max_line_length + 2, 80)
+                    max_width = max(max_width, width)
+        ws.column_dimensions[col_letter].width = max_width
+
+
+def _auto_size_rows(ws: Worksheet) -> None:
+    """Adjust row heights to fit multi-line content with word wrapping."""
+    for row_idx, row in enumerate(ws.iter_rows(), start=1):
+        max_lines = 1
+        for cell in row:
+            if cell.value:
+                text = str(cell.value)
+                col_width = ws.column_dimensions[cell.column_letter].width or 10
+                line_count = _line_count(text)
+
+                wrapped_lines = 0
+                for line in text.split('\n'):
+                    if col_width > 0:
+                        wrapped_lines += max(1, (len(line) // int(col_width)) + 1)
+                    else:
+                        wrapped_lines += line_count
+
+                max_lines = max(max_lines, wrapped_lines or 1)
+
+        ws.row_dimensions[row_idx].height = max(18, 15 * max_lines + 4)
+
+
 def _line_count(value: Any) -> int:
     text = "" if value is None else str(value)
     return max(1, text.count("\n") + 1) if text else 1
@@ -180,6 +217,9 @@ def _write_cases_to_sheet(ws: Worksheet, test_cases: list[TestCase], styles: dic
         for col in range(1, max_col + 1):
             ws.cell(row, col).value = None
         ws.row_dimensions[row].height = None
+
+    _auto_size_columns(ws)
+    _auto_size_rows(ws)
 
 
 # ---------------------------------------------------------------------------

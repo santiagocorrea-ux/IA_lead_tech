@@ -3,41 +3,57 @@
         // =========================
         // PERSONAL
         // =========================
-        last_name: 'SMITH',
-        first_name: 'JOHN',
+        last_name: 'DUPONT',
+        first_name: 'JEAN',
         gender: 'male',
-        date_of_birth: '2000-06-15',
+        date_of_birth: '1990-01-15',
 
         country_of_citizenship: 'US',
         country_of_birth: 'US',
         city_of_birth: 'NEW YORK',
         marital_status: '1',
 
+        // Mauritius-specific personal fields (verified working)
+        home_country: 'MU',       // Country of Residence (Mauritius: MU)
+        home_address: '123 Royal Street, Port Louis',
+
         // =========================
         // CONTACT
         // =========================
-        email: 'john.smith@gmail.com',
-        confirm_email: 'john.smith@gmail.com',
-        phone_country_code: 'US',
-        phone: '2025550123',
+        email: 'applicant@gmail.com',
+        confirm_email: 'applicant@gmail.com',
+        phone_country_code: 'MU',
+        phone: '57123456',
+        phone_prefix_dial: '230',  // Raw dial code (230 = Mauritius)
 
         // =========================
         // PASSPORT
         // =========================
         passport_type: '1',
-        passport_country: 'US',
-        passport_number: 'A1234567',
+        passport_country: 'FR',    // France (Mauritius test)
+        passport_number: 'A12345678',
         passport_issue: '2020-01-10',
         passport_expiry: '2030-04-03',
 
         // =========================
         // TRAVEL
         // =========================
-        transport_type: '1',      // Air
+        transport_type: '0',      // Mauritius: 0=By air, 1=By sea. Malaysia: 1=Air
         flight_number: 'AA123',
-        arrival_date: '2029-01-02',
-        departure_date: '2029-04-06',
-        departure_country: 'US',
+        arrival_date: '2026-05-15', // Intended Date of Entry
+        departure_date: '2026-05-25',
+        departure_country: 'FR',
+
+        // Mauritius-specific travel fields (verified working)
+        airline_company: '4',     // 4=AIR MAURITIUS
+        mauritius_flight_number: '4_1', // 4_1=MK015 (format: airlineId_index)
+        special_flight_number: '',
+        cruise_company: '',
+        ship_name: '',
+        name_vessel: '',
+        purpose: '4',             // 4=Tourism
+        other_purpose: '',
+        embarkation_port: 'Paris',
 
         // =========================
         // MALAYSIA ACCOMMODATION
@@ -49,13 +65,26 @@
         zip_code: '10001',
 
         // =========================
+        // MAURITIUS HEALTH DECLARATION
+        // =========================
+        health: {
+            question_a: '0',      // Fever (0=No, 1=Yes)
+            question_b: '0',      // Skin lesions
+            question_c: '0',      // Joints pain
+            question_d: '0',      // Sore throat
+            question_e: '0',      // Cough
+            question_f: '0'       // Breathing difficulties
+        },
+
+        // =========================
         // OPTIONAL
         // =========================
         natid: '',
 
         declarations: {
-            declaration2: true,
-            declaration3: true
+            declaration1: true,   // Mauritius: Terms and Conditions
+            declaration2: true,   // Malaysia + Mauritius: Truthfulness
+            declaration3: true    // Malaysia: Additional declaration
         }
     };
 
@@ -277,20 +306,31 @@
         return false;
     }
 
+    function trySetSelectByValue(id, value) {
+        const el = byId(id);
+        if (!el || value == null || value === '') return false;
+        return setSelectElement(el, value);
+    }
+
     async function run() {
         // Personal
-        setInputAny(['last_name'], DATA.last_name);
-        setInputAny(['first_name'], DATA.first_name);
+        setInputAny(['last_name', 'surname'], DATA.last_name);
+        setInputAny(['first_name', 'given_name', 'given_names'], DATA.first_name);
         setRadio('gender', DATA.gender);
         setDate('date_of_birth', DATA.date_of_birth);
         await sleep(100);
 
+        // Country of citizenship (Malaysia) / Country of residence (Mauritius: home_country)
         setSelectAny(['country_of_citizenship'], DATA.country_of_citizenship);
+        setSelectAny(['home_country', 'country_of_residence'], DATA.home_country);
         await sleep(100);
 
         setSelectAny(['country_of_birth'], DATA.country_of_birth);
         setInputAny(['city_of_birth'], DATA.city_of_birth);
         setSelectAny(['marital_status'], DATA.marital_status);
+
+        // Home address (Mauritius)
+        setInputAny(['home_address', 'residential_address'], DATA.home_address);
 
         // Contact
         setInputAny(['email'], DATA.email);
@@ -298,6 +338,18 @@
         setInputAny(['confirm_email', 'email_confirmation'], DATA.confirm_email);
 
         await setPhoneCountry(DATA.phone_country_code);
+
+        // Mauritius: phone prefix uses raw dial code on #prefix-phone
+        if (DATA.phone_prefix_dial) {
+            const prefixSelect = byId('prefix-phone');
+            if (prefixSelect) {
+                const opt = [...prefixSelect.options].find(o =>
+                    String(o.value).replace(/^\+/, '') === String(DATA.phone_prefix_dial).replace(/^\+/, '')
+                );
+                if (opt) setSelectElement(prefixSelect, opt.value);
+            }
+        }
+
         await sleep(100);
         setInputAny(['phone'], DATA.phone);
 
@@ -310,7 +362,27 @@
 
         // Travel
         setSelectAny(['transport_type'], DATA.transport_type);
-        setInputAny(['flight_number'], DATA.flight_number);
+
+        // Flight number: Malaysia uses text input, Mauritius uses select (airlineId_index format)
+        if (!trySetSelectByValue('flight_number', DATA.mauritius_flight_number)) {
+            setInputAny(['flight_number'], DATA.flight_number);
+        }
+
+        // Mauritius: airline company
+        setSelectAny(['airline_company'], DATA.airline_company);
+        setInputAny(['special_flight_number'], DATA.special_flight_number);
+
+        // Mauritius: cruise (if transport by sea)
+        setSelectAny(['cruise_company'], DATA.cruise_company);
+        setSelectAny(['ship_name'], DATA.ship_name);
+        setInputAny(['name_vessel'], DATA.name_vessel);
+
+        // Mauritius: purpose of visit
+        setSelectAny(['purpose', 'purpose_of_visit'], DATA.purpose);
+        setInputAny(['other_purpose'], DATA.other_purpose);
+
+        // Mauritius: embarkation port
+        setInputAny(['embarkation_port', 'last_port'], DATA.embarkation_port);
 
         setDate('arrival_date', DATA.arrival_date);
         await sleep(250);
@@ -325,7 +397,7 @@
         setDate('departure_date', DATA.departure_date);
         setSelectAny(['departure_country'], DATA.departure_country);
 
-        // Accommodation
+        // Accommodation (Malaysia) / Address during stay (Mauritius also uses accommodation_address)
         setSelectAny(['accommodation_type'], DATA.accommodation_type);
         setInputAny(['accommodation_address'], DATA.accommodation_address);
 
@@ -339,12 +411,17 @@
         // Optional
         setInputAny(['natid'], DATA.natid);
 
+        // Mauritius: Health declaration radios (question_a through question_f)
+        Object.entries(DATA.health || {}).forEach(([name, value]) => {
+            setRadio(name, value);
+        });
+
         // Declarations
         Object.entries(DATA.declarations || {}).forEach(([id, checked]) => {
             setCheckbox(id, checked);
         });
 
-        console.log('Malaysia form filled.');
+        console.log('Form filled (Malaysia/Mauritius compatible).');
     }
 
     run();
