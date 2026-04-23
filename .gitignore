@@ -6,3 +6,9 @@ token_*.txt
 .bitbucket_auth
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+
+# Generated test case outputs (keep only template and generator)
+test_cases/test_cases.json
+test_cases/test_cases.xlsx
